@@ -1,4 +1,5 @@
-import { getImoveis, WHATSAPP } from '@/lib/store';
+import { getImoveis, WHATSAPP, INSTAGRAM } from '@/lib/store';
+import Instagram from '@/components/Instagram';
 import ImovelCard from '@/components/ImovelCard';
 import ContatoForm from '@/components/ContatoForm';
 
@@ -13,7 +14,7 @@ export default async function Home() {
         <div className="wrap">
           <nav className="nav">
             <a className="logo" href="#" aria-label="NP Construções, início"><img src="/logo-header.png" alt="NP Construções" /></a>
-            <div><a href="#imoveis">Imóveis</a><a href="#contato">Proposta</a></div>
+            <div><a href="#imoveis">Imóveis</a><a href="#contato">Proposta</a><a href={INSTAGRAM} target="_blank" rel="noopener noreferrer">Instagram</a></div>
           </nav>
           <div className="hero">
             <div>
@@ -48,11 +49,12 @@ export default async function Home() {
             <h2>Receba uma proposta</h2>
             <p style={{ margin: '12px 0 20px' }}>Informe seus dados e um corretor da NP Construções entra em contato pelo WhatsApp com valores e condições.</p>
             <p>WhatsApp: <a href={zap}><b>(85) 98170-0898</b></a></p>
+            <p>Instagram: <Instagram url={INSTAGRAM} /></p>
           </div>
           <ContatoForm titulos={imoveis.map((i) => i.titulo)} />
         </div></section>
       </main>
-      <footer><div className="wrap">NP Construções · O lugar perfeito para construir sua história</div></footer>
+      <footer><div className="wrap"><Instagram url={INSTAGRAM} />NP Construções · O lugar perfeito para construir sua história</div></footer>
       <a className="zap" href={zap} aria-label="Falar no WhatsApp">WhatsApp</a>
     </>
   );

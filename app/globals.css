@@ -70,3 +70,4 @@ footer{background:#07142f;color:#fff;opacity:.9;padding:24px 0;font-size:.9rem;t
 
 .logo img{height:58px;width:auto;display:block}
 .nav{padding:10px 0}
+.ig{display:inline-flex;align-items:center;gap:8px;color:var(--gold);font-weight:600;text-decoration:none}.ig:hover{text-decoration:underline}footer .ig{display:flex;justify-content:center;margin-bottom:8px}
