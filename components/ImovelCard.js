@@ -1,7 +1,9 @@
 'use client';
 import { useState } from 'react';
 
-export default function ImovelCard({ im }) {
+export default function ImovelCard({ im, whatsapp }) {
+  const num = (im.vendedor || whatsapp).replace(/\D/g, '').replace(/^(?!55)/, '55');
+  const zap = `https://wa.me/${num}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel "${im.titulo}"${im.preco ? ` (${im.preco})` : ''} que vi no site da NP Construções. Pode me passar mais informações?`)}`;
   const [open, setOpen] = useState(false);
   const [n, setN] = useState(0);
   const f = im.fotos;
@@ -22,10 +24,7 @@ export default function ImovelCard({ im }) {
           {im.area > 0 && <span>{im.area} m²</span>}
         </div>
         {im.descricao && <p style={{ fontSize: '.95rem' }}>{im.descricao}</p>}
-        <a className="btn" href={`#contato?imovel=${encodeURIComponent(im.titulo)}`}
-           onClick={() => window.dispatchEvent(new CustomEvent('escolher-imovel', { detail: im.titulo }))}>
-          Quero uma proposta
-        </a>
+        <a className="btn" href={zap} target="_blank" rel="noopener noreferrer">Quero uma proposta</a>
       </div>
       {open && (
         <div className="lb" role="dialog" aria-modal="true" onClick={() => setOpen(false)}>

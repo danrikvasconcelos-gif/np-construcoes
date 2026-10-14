@@ -19,7 +19,7 @@ async function enviarFoto(file, senha) {
 }
 
 const H = (s) => ({ 'x-admin-password': s, 'Content-Type': 'application/json' });
-const vazio = { titulo: '', tipo: 'Apartamento', preco: '', local: '', quartos: 2, banheiros: 1, area: '', descricao: '' };
+const vazio = { titulo: '', tipo: 'Apartamento', preco: '', local: '', quartos: 2, banheiros: 1, area: '', descricao: '', vendedor: '' };
 
 export default function Admin() {
   const [senha, setSenha] = useState('');
@@ -31,6 +31,8 @@ export default function Admin() {
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const [prog, setProg] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [atuais, setAtuais] = useState([]);
 
   async function carregar(s) {
     setLista(await (await fetch('/api/imoveis', { cache: 'no-store' })).json());
@@ -55,21 +57,33 @@ export default function Admin() {
   }
   async function publicar(e) {
     e.preventDefault();
-    if (!files.length) return setMsg({ e: true, t: 'Escolha ao menos uma foto.' });
+    if (!files.length && !atuais.length) return setMsg({ e: true, t: 'Escolha ao menos uma foto.' });
     setBusy(true); setMsg(null);
     try {
-      const fotos = [];
+      const fotos = [...atuais];
       for (let i = 0; i < files.length; i++) {
         setProg(`Enviando foto ${i + 1} de ${files.length}...`);
         fotos.push(await enviarFoto(files[i], senha));
       }
       setProg('Publicando...');
-      const r = await fetch('/api/imoveis', { method: 'POST', headers: H(senha), body: JSON.stringify({ ...f, fotos }) });
+      const r = await fetch(editId ? `/api/imoveis/${editId}` : '/api/imoveis', { method: editId ? 'PUT' : 'POST', headers: H(senha), body: JSON.stringify({ ...f, fotos }) });
       if (!r.ok) throw new Error((await r.json()).error);
-      setF(vazio); setFiles([]); e.target.reset(); await carregar(senha);
-      setMsg({ t: 'Imóvel publicado no site.' });
+      const eraEdicao = !!editId;
+      cancelar(); e.target.reset(); await carregar(senha);
+      setMsg({ t: eraEdicao ? 'Alterações salvas no site.' : 'Imóvel publicado no site.' });
     } catch (err) { setMsg({ e: true, t: err.message || 'Erro ao publicar.' }); }
     setBusy(false);
+  }
+  function editar(im) {
+    setEditId(im.id); setAtuais(im.fotos); setFiles([]); setMsg(null);
+    setF({ titulo: im.titulo, tipo: im.tipo, preco: im.preco, local: im.local, quartos: im.quartos, banheiros: im.banheiros, area: im.area || '', descricao: im.descricao, vendedor: im.vendedor || '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function cancelar() { setEditId(null); setAtuais([]); setF(vazio); setFiles([]); }
+  const capa = (u) => setAtuais([u, ...atuais.filter((x) => x !== u)]);
+  function sair() {
+    sessionStorage.removeItem('np-admin');
+    setOk(false); setSenha(''); setLeads([]); cancelar(); setMsg(null);
   }
   async function excluir(im) {
     if (!confirm(`Excluir "${im.titulo}" e suas fotos?`)) return;
@@ -89,9 +103,15 @@ export default function Admin() {
 
   return (
     <main className="wrap adm">
-      <h1 style={{ marginBottom: 20 }}>Painel do administrador</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1>Painel do administrador</h1>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <a className="btn ghost" href="/" style={{ color: 'var(--navy)', boxShadow: 'inset 0 0 0 1.5px var(--navy)', padding: '10px 18px' }}>Ver site</a>
+          <button type="button" className="btn del" style={{ padding: '10px 18px' }} onClick={sair}>Sair</button>
+        </div>
+      </div>
       <form className="box" onSubmit={publicar}>
-        <h2 style={{ fontSize: '1.7rem', marginBottom: 14 }}>Novo imóvel</h2>
+        <h2 style={{ fontSize: '1.7rem', marginBottom: 14 }}>{editId ? 'Editar imóvel' : 'Novo imóvel'}</h2>
         <label>Título<input required value={f.titulo} onChange={set('titulo')} placeholder="Apartamento 2 quartos com varanda" /></label>
         <div className="r3" style={{ margin: '14px 0' }}>
           <label>Tipo<select value={f.tipo} onChange={set('tipo')}><option>Apartamento</option><option>Casa</option></select></label>
@@ -103,19 +123,28 @@ export default function Admin() {
           <label>Banheiros<input type="number" min="0" value={f.banheiros} onChange={set('banheiros')} /></label>
           <label>Área (m²)<input type="number" min="0" value={f.area} onChange={set('area')} /></label>
         </div>
+        <label style={{ marginBottom: 14 }}>WhatsApp do vendedor deste imóvel (opcional, com DDD; se vazio usa o da empresa)
+          <input type="tel" value={f.vendedor} onChange={set('vendedor')} placeholder="85981700898" /></label>
         <label>Descrição<textarea rows="3" value={f.descricao} onChange={set('descricao')} /></label>
-        <label style={{ margin: '14px 0' }}>Fotos (JPG, PNG ou WebP; a primeira é a capa)
+        {atuais.length > 0 && (<div><b style={{ fontSize: '.92rem' }}>Fotos atuais</b>
+          <div className="prev">{atuais.map((u, i) => (
+            <div key={u} style={{ textAlign: 'center' }}><img src={u} alt="" />
+              <div><button type="button" className="btn" style={{ padding: '2px 8px', fontSize: '.75rem' }} onClick={() => capa(u)}>{i === 0 ? 'Capa' : 'Tornar capa'}</button>{' '}
+                <button type="button" className="btn del" style={{ padding: '2px 8px', fontSize: '.75rem' }} onClick={() => setAtuais(atuais.filter((x) => x !== u))}>Remover</button></div></div>
+          ))}</div></div>)}
+        <label style={{ margin: '14px 0' }}>{editId ? 'Adicionar mais fotos' : 'Fotos'} (JPG, PNG ou WebP; a primeira é a capa)
           <input type="file" accept="image/*" multiple onChange={(e) => setFiles([...e.target.files])} />
         </label>
         <div className="prev">{files.map((x) => <img key={x.name + x.size} src={URL.createObjectURL(x)} alt="" />)}</div>
-        <button className="btn" disabled={busy} style={{ marginTop: 16 }}>{busy ? prog || 'Enviando...' : 'Publicar imóvel'}</button>
+        <button className="btn" disabled={busy} style={{ marginTop: 16 }}>{busy ? prog || 'Enviando...' : editId ? 'Salvar alterações' : 'Publicar imóvel'}</button>
+        {editId && <button type="button" className="btn ghost" style={{ marginTop: 16, marginLeft: 10, color: 'var(--navy)', boxShadow: 'inset 0 0 0 1.5px var(--navy)' }} onClick={cancelar}>Cancelar edição</button>}
         {msg && <div className={`msg ${msg.e ? 'err' : 'ok'}`} style={{ marginTop: 12 }}>{msg.t}</div>}
       </form>
 
       <div className="box"><h2 style={{ fontSize: '1.7rem' }}>Imóveis publicados ({lista.length})</h2>
         {lista.map((im) => (
           <div className="row" key={im.id}><div><img src={im.fotos[0]} alt="" /><span>{im.titulo}<br /><small>{im.fotos.length} fotos</small></span></div>
-            <button className="btn del" onClick={() => excluir(im)}>Excluir</button></div>
+            <div><button className="btn" style={{ padding: '8px 14px' }} onClick={() => editar(im)}>Editar</button><button className="btn del" onClick={() => excluir(im)}>Excluir</button></div></div>
         ))}
       </div>
 

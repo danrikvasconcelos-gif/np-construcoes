@@ -40,7 +40,7 @@ export default async function Home() {
         <section className="sec" id="imoveis"><div className="wrap">
           <h2>Imóveis disponíveis</h2>
           <p className="sub">Toque na foto para ver todas as imagens do imóvel.</p>
-          {imoveis.length ? <div className="grid">{imoveis.map((im) => <ImovelCard key={im.id} im={im} />)}</div> :
+          {imoveis.length ? <div className="grid">{imoveis.map((im) => <ImovelCard key={im.id} im={im} whatsapp={WHATSAPP} />)}</div> :
             <div className="vazio">Novos imóveis serão publicados em breve. Fale com nossos corretores no WhatsApp.</div>}
         </div></section>
 
