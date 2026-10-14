@@ -7,7 +7,7 @@ export async function POST(request) {
     const json = await handleUpload({
       body, request,
       onBeforeGenerateToken: async (_path, clientPayload) => {
-        if (!process.env.ADMIN_PASSWORD || clientPayload !== process.env.ADMIN_PASSWORD)
+        if (!process.env.ADMIN_PASSWORD || (clientPayload || '').trim() !== process.env.ADMIN_PASSWORD.trim())
           throw new Error('Não autorizado');
         return { allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'], addRandomSuffix: true, maximumSizeInBytes: 15 * 1024 * 1024 };
       },

@@ -17,19 +17,24 @@ export default function Admin() {
 
   async function carregar(s) {
     setLista(await (await fetch('/api/imoveis', { cache: 'no-store' })).json());
-    const r = await fetch('/api/contato', { headers: H(s) });
-    if (r.ok) { setLeads(await r.json()); return true; }
-    return false;
+    const l = await fetch('/api/contato', { headers: H(s) });
+    if (l.ok) setLeads(await l.json());
+  }
+  async function login(s) {
+    const r = await fetch('/api/login', { method: 'POST', headers: H(s) });
+    if (r.ok) { await carregar(s); return null; }
+    return (await r.json().catch(() => ({}))).error || 'Erro no servidor. Veja os logs na Vercel.';
   }
   useEffect(() => {
     const s = sessionStorage.getItem('np-admin');
-    if (s) { setSenha(s); carregar(s).then((v) => v ? setOk(true) : sessionStorage.removeItem('np-admin')); }
+    if (s) { setSenha(s); login(s).then((e) => e ? sessionStorage.removeItem('np-admin') : setOk(true)); }
   }, []);
 
   async function entrar(e) {
     e.preventDefault();
-    if (await carregar(senha)) { sessionStorage.setItem('np-admin', senha); setOk(true); setMsg(null); }
-    else setMsg({ e: true, t: 'Senha incorreta.' });
+    const erro = await login(senha);
+    if (!erro) { sessionStorage.setItem('np-admin', senha); setOk(true); setMsg(null); }
+    else setMsg({ e: true, t: erro });
   }
   async function publicar(e) {
     e.preventDefault();
