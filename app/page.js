@@ -12,7 +12,7 @@ export default async function Home() {
       <header className="top">
         <div className="wrap">
           <nav className="nav">
-            <a className="logo" href="#">NP <b>Construções</b></a>
+            <a className="logo" href="#" aria-label="NP Construções, início"><img src="/logo-header.png" alt="NP Construções" /></a>
             <div><a href="#imoveis">Imóveis</a><a href="#contato">Proposta</a></div>
           </nav>
           <div className="hero">
