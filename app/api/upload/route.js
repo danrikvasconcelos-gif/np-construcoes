@@ -1,20 +1,19 @@
-import { handleUpload } from '@vercel/blob/client';
+import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { isAdmin } from '@/lib/store';
 
-export async function POST(request) {
-  const body = await request.json();
+export const maxDuration = 30;
+
+export async function POST(req) {
+  if (!isAdmin(req)) return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 });
   try {
-    const json = await handleUpload({
-      body, request,
-      onBeforeGenerateToken: async (_path, clientPayload) => {
-        if (!process.env.ADMIN_PASSWORD || (clientPayload || '').trim() !== process.env.ADMIN_PASSWORD.trim())
-          throw new Error('Não autorizado');
-        return { allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp'], addRandomSuffix: true, maximumSizeInBytes: 15 * 1024 * 1024 };
-      },
-      onUploadCompleted: async () => {},
+    const file = (await req.formData()).get('file');
+    if (!file || !file.type?.startsWith('image/')) return NextResponse.json({ error: 'Arquivo inválido' }, { status: 400 });
+    const blob = await put(`fotos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`, file, {
+      access: 'public', contentType: 'image/jpeg', addRandomSuffix: true,
     });
-    return NextResponse.json(json);
+    return NextResponse.json({ url: blob.url });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 400 });
+    return NextResponse.json({ error: `Falha ao salvar a foto no Blob: ${e.message}` }, { status: 500 });
   }
 }

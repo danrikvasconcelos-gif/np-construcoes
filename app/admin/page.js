@@ -1,6 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { upload } from '@vercel/blob/client';
+
+async function comprimir(file) {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('Não foi possível processar a foto'))), 'image/jpeg', 0.82));
+}
+async function enviarFoto(file, senha) {
+  const fd = new FormData();
+  fd.append('file', await comprimir(file), 'foto.jpg');
+  const r = await fetch('/api/upload', { method: 'POST', headers: { 'x-admin-password': senha }, body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Erro ao enviar a foto');
+  return j.url;
+}
 
 const H = (s) => ({ 'x-admin-password': s, 'Content-Type': 'application/json' });
 const vazio = { titulo: '', tipo: 'Apartamento', preco: '', local: '', quartos: 2, banheiros: 1, area: '', descricao: '' };
@@ -14,6 +30,7 @@ export default function Admin() {
   const [files, setFiles] = useState([]);
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [prog, setProg] = useState('');
 
   async function carregar(s) {
     setLista(await (await fetch('/api/imoveis', { cache: 'no-store' })).json());
@@ -42,10 +59,11 @@ export default function Admin() {
     setBusy(true); setMsg(null);
     try {
       const fotos = [];
-      for (const file of files) {
-        const b = await upload(`fotos/${file.name}`, file, { access: 'public', handleUploadUrl: '/api/upload', clientPayload: senha });
-        fotos.push(b.url);
+      for (let i = 0; i < files.length; i++) {
+        setProg(`Enviando foto ${i + 1} de ${files.length}...`);
+        fotos.push(await enviarFoto(files[i], senha));
       }
+      setProg('Publicando...');
       const r = await fetch('/api/imoveis', { method: 'POST', headers: H(senha), body: JSON.stringify({ ...f, fotos }) });
       if (!r.ok) throw new Error((await r.json()).error);
       setF(vazio); setFiles([]); e.target.reset(); await carregar(senha);
@@ -90,7 +108,7 @@ export default function Admin() {
           <input type="file" accept="image/*" multiple onChange={(e) => setFiles([...e.target.files])} />
         </label>
         <div className="prev">{files.map((x) => <img key={x.name + x.size} src={URL.createObjectURL(x)} alt="" />)}</div>
-        <button className="btn" disabled={busy} style={{ marginTop: 16 }}>{busy ? 'Enviando fotos...' : 'Publicar imóvel'}</button>
+        <button className="btn" disabled={busy} style={{ marginTop: 16 }}>{busy ? prog || 'Enviando...' : 'Publicar imóvel'}</button>
         {msg && <div className={`msg ${msg.e ? 'err' : 'ok'}`} style={{ marginTop: 12 }}>{msg.t}</div>}
       </form>
 
